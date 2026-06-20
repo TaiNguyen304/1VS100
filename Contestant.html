@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Contestant - AceStudio</title>
+  <style>
+    * {
+      font-weight: bold !important;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    .login-section {
+      border: 2px solid #ddd;
+      padding: 30px;
+      border-radius: 10px;
+      background-color: #f9f9f9;
+    }
+
+    .game-section {
+      display: none;
+      border: 2px solid yellow;
+      padding: 30px;
+      border-radius: 10px;
+      background-color: white;
+    }
+
+    input,
+    button {
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: green;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: orange !important;
+      color: white !important;
+    }
+
+    .answer-btn {
+      width: 80px;
+      height: 80px;
+      margin: 10px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .error-message {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .success-message {
+      color: green;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    /* Custom Popup */
+    .custom-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .custom-popup-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .custom-popup-box {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .custom-popup-msg {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #333;
+      white-space: pre-wrap;
+    }
+
+    .custom-popup-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .custom-popup-btn {
+      font-weight: bold !important;
+      border: none;
+      padding: 10px 25px;
+      font-size: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      min-width: 100px;
+    }
+
+    .btn-close {
+      background-color: red !important;
+      color: white !important;
+    }
+
+    .btn-close:hover {
+      background-color: orange !important;
+    }
+
+    .btn-confirm {
+      background-color: green !important;
+      color: white !important;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Contestant - AceStudio</h1>
+
+  <div id="login-section" class="login-section">
+    <h2>Đăng nhập vào phòng</h2>
+    <form id="login-form">
+      <div>
+        <label for="username">Tên đăng nhập:</label>
+        <input type="text" id="username" placeholder="Nhập tên của bạn" required>
+      </div>
+      <div>
+        <label for="room-code">Mã phòng:</label>
+        <input type="text" id="room-code" placeholder="Nhập mã phòng" required>
+      </div>
+      <button type="submit">Đăng nhập</button>
+    </form>
+    <div id="login-message"></div>
+  </div>
+
+  <div id="game-section" class="game-section">
+    <h2>Chào mừng, <span id="player-name"></span>!</h2>
+    <p>Phòng: <span id="current-room"></span></p>
+    <div style="margin: 8px 0 16px 0;">
+      <button id="logout-btn">Đăng xuất</button>
+    </div>
+    <h3>Chọn đáp án:</h3>
+    <div id="answer-buttons">
+      <button class="answer-btn" data-answer="A">A</button>
+      <button class="answer-btn" data-answer="B">B</button>
+      <button class="answer-btn" data-answer="C">C</button>
+    </div>
+    <div id="game-message"></div>
+  </div>
+
+  <div id="customPopup" class="custom-popup-overlay">
+    <div class="custom-popup-box">
+      <div id="customPopupMessage" class="custom-popup-msg">Thông báo</div>
+      <div class="custom-popup-buttons">
+        <button id="customPopupConfirm" class="custom-popup-btn btn-confirm">Đồng ý</button>
+        <button id="customPopupClose" class="custom-popup-btn btn-close">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.keyCode === 123) e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault();
+      }
+    });
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const contestantConfig = { currentUser: null, currentRoom: null };
+    let answerOpenTimestamp = null;
+
+    // --- Hệ thống Popup thay thế ---
+    function showPopup(message, onConfirmCallback = null) {
+      const popup = document.getElementById('customPopup');
+      const msgDiv = document.getElementById('customPopupMessage');
+      const closeBtn = document.getElementById('customPopupClose');
+      const confirmBtn = document.getElementById('customPopupConfirm');
+
+      msgDiv.textContent = message;
+      popup.classList.add('active');
+
+      // Reset buttons
+      const newCloseBtn = closeBtn.cloneNode(true);
+      closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+      if (onConfirmCallback) {
+        newConfirmBtn.style.display = 'block';
+        newCloseBtn.textContent = 'Hủy';
+        newConfirmBtn.addEventListener('click', () => {
+          popup.classList.remove('active');
+          onConfirmCallback();
+        });
+      } else {
+        newConfirmBtn.style.display = 'none';
+        newCloseBtn.textContent = 'Đóng';
+      }
+
+      newCloseBtn.addEventListener('click', () => {
+        popup.classList.remove('active');
+      });
+    }
+
+    window.alert = function (msg) { showPopup(msg); };
+    window.confirm = function (msg) { showPopup(msg); return false; }; // Dùng showPopup với callback thay vì return
+    window.prompt = function (msg) { showPopup(msg); return null; };
+
+
+    // --- Logic Game ---
+    function autoFillRoomCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('rooms')) document.getElementById('room-code').value = urlParams.get('rooms');
+    }
+
+    function showMessage(msg, type) {
+      const div = document.getElementById('login-message');
+      div.textContent = msg;
+      div.className = type === 'error' ? 'error-message' : 'success-message';
+    }
+
+    function enableAnswerButtons() {
+      document.querySelectorAll('.answer-btn').forEach(btn => {
+        btn.disabled = false; btn.style.cursor = 'pointer'; btn.style.filter = '';
+      });
+    }
+
+    function disableAnswerButtons() {
+      document.querySelectorAll('.answer-btn').forEach(btn => {
+        btn.disabled = true; btn.style.cursor = 'not-allowed'; btn.style.filter = 'grayscale(1)';
+      });
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const roomCode = document.getElementById('room-code').value.trim();
+
+      if (!username || !roomCode) {
+        return showMessage('Vui lòng điền đầy đủ thông tin!', 'error');
+      }
+
+      socket.emit('contestant_login', { username, roomCode }, (res) => {
+        if (!res.success) {
+          showMessage(res.message, 'error');
+        } else {
+          contestantConfig.currentUser = username;
+          contestantConfig.currentRoom = roomCode;
+
+          document.getElementById('login-section').style.display = 'none';
+          document.getElementById('game-section').style.display = 'block';
+          document.getElementById('player-name').textContent = username;
+          document.getElementById('current-room').textContent = roomCode;
+
+          if (res.answerStatus === 'open') {
+            answerOpenTimestamp = performance.now();
+            enableAnswerButtons();
+          } else {
+            disableAnswerButtons();
+          }
+        }
+      });
+    });
+
+    // Socket Listeners
+    socket.on('state_changed', ({ key, value }) => {
+      if (key === 'answerStatus') {
+        if (value === 'open') {
+          answerOpenTimestamp = performance.now();
+          enableAnswerButtons();
+          document.getElementById('game-message').textContent = '';
+        } else {
+          answerOpenTimestamp = null;
+          disableAnswerButtons();
+        }
+      }
+      if (key === 'correctAnswer' && value === null) {
+        document.getElementById('game-message').textContent = '';
+      }
+    });
+
+    socket.on('kicked', () => {
+      showPopup('Bạn đã bị kick khỏi phòng!', () => location.reload());
+    });
+
+    socket.on('banned', () => {
+      showPopup('Bạn đã bị BAN khỏi phòng!', () => location.reload());
+    });
+
+    document.querySelectorAll('.answer-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        if (!answerOpenTimestamp) return;
+        const answer = this.getAttribute('data-answer');
+        const elapsed = ((performance.now() - answerOpenTimestamp) / 1000).toFixed(2);
+
+        socket.emit('submit_answer', { answer, time: elapsed });
+        document.getElementById('game-message').textContent = `Bạn đã chọn đáp án: ${answer} lúc ${elapsed}s`;
+        disableAnswerButtons();
+      });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      socket.emit('contestant_logout');
+      location.reload();
+    });
+
+    document.addEventListener('DOMContentLoaded', autoFillRoomCode);
+  </script>
+</body>
+
+</html>

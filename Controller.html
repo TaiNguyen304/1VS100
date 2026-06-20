@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controller - AceStudio</title>
+  <style>
+    * {
+      font-weight: bold !important;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f9;
+    }
+
+    h1,
+    h2,
+    h3 {
+      color: #333;
+    }
+
+    .section {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .flex-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .flex-child {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+
+    button:hover {
+      background-color: orange !important;
+      color: white !important;
+    }
+
+    .btn-primary {
+      background-color: blue;
+      color: #fff;
+    }
+
+    .btn-success {
+      background-color: green;
+      color: #fff;
+    }
+
+    .btn-danger {
+      background-color: red;
+      color: #fff;
+    }
+
+    .btn-warning {
+      background-color: yellow;
+      color: black;
+    }
+
+    .btn-secondary {
+      background-color: purple;
+      color: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+
+    .status-open {
+      color: green;
+    }
+
+    .status-closed {
+      color: red;
+    }
+
+    /* Custom Popup */
+    .custom-popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .custom-popup-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .custom-popup-box {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .custom-popup-msg {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: #333;
+      white-space: pre-wrap;
+    }
+
+    .custom-popup-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .custom-popup-btn {
+      font-weight: bold !important;
+      border: none;
+      padding: 10px 25px;
+      font-size: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      min-width: 100px;
+    }
+
+    .btn-close {
+      background-color: red !important;
+      color: white !important;
+    }
+
+    .btn-close:hover {
+      background-color: orange !important;
+    }
+
+    .btn-confirm {
+      background-color: green !important;
+      color: white !important;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Controller - AceStudio</h1>
+
+  <div id="customPopup" class="custom-popup-overlay">
+    <div class="custom-popup-box">
+      <div id="customPopupMessage" class="custom-popup-msg">Thông báo</div>
+      <div class="custom-popup-buttons">
+        <button id="customPopupConfirm" class="custom-popup-btn btn-confirm">Đồng ý</button>
+        <button id="customPopupClose" class="custom-popup-btn btn-close">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Quản lý phòng</h2>
+    <div style="max-width: 300px;">
+      <label for="room-id-input">Mã phòng (ID):</label>
+      <input type="text" id="room-id-input" placeholder="Nhập mã phòng...">
+    </div>
+    <button id="btn-connect-room" class="btn-primary">Kết nối / Tạo phòng</button>
+    <p>Trạng thái: <span id="connection-status" style="color:red;">Chưa kết nối</span></p>
+  </div>
+
+  <div class="flex-container">
+    <div class="flex-child section">
+      <h2>Trạng thái phòng</h2>
+      <p>Đăng nhập: <span id="login-status-text" class="status-closed">N/A</span></p>
+      <button id="btn-toggle-login" class="btn-warning" disabled>Bật/Tắt Đăng nhập</button>
+
+      <hr>
+      <h2>Điều khiển trả lời</h2>
+      <p>Cổng trả lời: <span id="answer-status-text" class="status-closed">N/A</span></p>
+      <button id="btn-open-answer" class="btn-success" disabled>Mở cổng trả lời</button>
+      <button id="btn-close-answer" class="btn-danger" disabled>Khóa cổng trả lời</button>
+      <button id="btn-clear-answers" class="btn-secondary" disabled>Xóa tất cả câu trả lời</button>
+
+      <hr>
+      <h2>Đáp án đúng hiện tại</h2>
+      <p>Hệ thống ghi nhận: <span id="correct-answer-text" style="color:blue;">Chưa đặt</span></p>
+      <button data-ans="A" class="btn-set-answer btn-primary" disabled>Đặt ĐA: A</button>
+      <button data-ans="B" class="btn-set-answer btn-primary" disabled>Đặt ĐA: B</button>
+      <button data-ans="C" class="btn-set-answer btn-primary" disabled>Đặt ĐA: C</button>
+      <button id="btn-delete-correct-answer" class="btn-danger" disabled>Xóa đáp án</button>
+    </div>
+
+    <div class="flex-child section">
+      <h2>Danh sách thí sinh (<span id="user-count">0</span>)</h2>
+      <table id="users-table">
+        <thead>
+          <tr>
+            <th>Thí sinh</th>
+            <th>Đáp án</th>
+            <th>Thời gian (s)</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="4" style="text-align:center;color:#888;">Vui lòng kết nối...</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 20px;">
+        <h3>Danh sách BAN</h3>
+        <ul id="banned-list" style="color: red;">
+          <li>Trống</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.keyCode === 123) e.preventDefault();
+      if ((e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault();
+      }
+    });
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let currentRoomId = null;
+    let roomState = {};
+
+    // --- Hệ thống Popup ---
+    function showPopup(message, onConfirmCallback = null) {
+      const popup = document.getElementById('customPopup');
+      const msgDiv = document.getElementById('customPopupMessage');
+      const closeBtn = document.getElementById('customPopupClose');
+      const confirmBtn = document.getElementById('customPopupConfirm');
+
+      msgDiv.textContent = message;
+      popup.classList.add('active');
+
+      const newCloseBtn = closeBtn.cloneNode(true);
+      closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+      if (onConfirmCallback) {
+        newConfirmBtn.style.display = 'block';
+        newCloseBtn.textContent = 'Hủy';
+        newConfirmBtn.addEventListener('click', () => {
+          popup.classList.remove('active');
+          onConfirmCallback();
+        });
+      } else {
+        newConfirmBtn.style.display = 'none';
+        newCloseBtn.textContent = 'Đóng';
+      }
+
+      newCloseBtn.addEventListener('click', () => popup.classList.remove('active'));
+    }
+
+    window.alert = msg => showPopup(msg);
+    window.confirm = msg => { showPopup(msg); return false; };
+    window.prompt = msg => { showPopup(msg); return null; };
+
+    function setControlsDisabled(disabled) {
+      document.querySelectorAll('button:not(#btn-connect-room, .custom-popup-btn)').forEach(b => b.disabled = disabled);
+    }
+
+    document.getElementById('btn-connect-room').addEventListener('click', () => {
+      const rId = document.getElementById('room-id-input').value.trim();
+      if (!rId) return showPopup('Vui lòng điền mã phòng!');
+
+      currentRoomId = rId;
+      document.getElementById('connection-status').textContent = 'Đang kết nối...';
+
+      socket.emit('controller_join', rId, (res) => {
+        if (res.success) {
+          document.getElementById('connection-status').textContent = `Đã kết nối: ${rId}`;
+          document.getElementById('connection-status').style.color = 'green';
+          setControlsDisabled(false);
+          renderState(res.roomState);
+        }
+      });
+    });
+
+    socket.on('room_state_update', (state) => {
+      renderState(state);
+    });
+
+    function renderState(state) {
+      roomState = state;
+
+      const loginStatus = document.getElementById('login-status-text');
+      loginStatus.textContent = state.loginStatus.toUpperCase();
+      loginStatus.className = state.loginStatus === 'open' ? 'status-open' : 'status-closed';
+
+      const ansStatus = document.getElementById('answer-status-text');
+      ansStatus.textContent = state.answerStatus.toUpperCase();
+      ansStatus.className = state.answerStatus === 'open' ? 'status-open' : 'status-closed';
+
+      document.getElementById('correct-answer-text').textContent = state.correctAnswer || 'Chưa đặt';
+
+      const users = Object.values(state.users || {});
+      document.getElementById('user-count').textContent = users.length;
+
+      const tbody = document.querySelector('#users-table tbody');
+      tbody.innerHTML = '';
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;">Chưa có thí sinh.</td></tr>';
+      } else {
+        users.sort((a, b) => (parseFloat(a.time) || 9999) - (parseFloat(b.time) || 9999));
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${u.name}</td>
+            <td style="${u.answer ? 'font-weight:bold' : ''}">${u.answer || '-'}</td>
+            <td>${u.time ? u.time + 's' : '-'}</td>
+            <td>
+              <button class="btn-warning" onclick="kick('${u.name}')">Kick</button>
+              <button class="btn-danger" onclick="ban('${u.name}')">Ban</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      const banned = Object.keys(state.banned || {});
+      const banList = document.getElementById('banned-list');
+      banList.innerHTML = '';
+      if (banned.length === 0) {
+        banList.innerHTML = '<li>Trống</li>';
+      } else {
+        banned.forEach(u => {
+          const li = document.createElement('li');
+          li.innerHTML = `${u} <button class="btn-success" style="padding:2px 6px; font-size:11px;" onclick="unban('${u}')">Gỡ Ban</button>`;
+          banList.appendChild(li);
+        });
+      }
+    }
+
+    // Controls Dispatch
+    document.getElementById('btn-toggle-login').addEventListener('click', () => {
+      const next = roomState.loginStatus === 'open' ? 'closed' : 'open';
+      socket.emit('update_room_state', { roomId: currentRoomId, key: 'loginStatus', value: next });
+    });
+
+    document.getElementById('btn-open-answer').addEventListener('click', () => {
+      socket.emit('update_room_state', { roomId: currentRoomId, key: 'answerStatus', value: 'open' });
+    });
+
+    document.getElementById('btn-close-answer').addEventListener('click', () => {
+      socket.emit('update_room_state', { roomId: currentRoomId, key: 'answerStatus', value: 'closed' });
+    });
+
+    document.getElementById('btn-clear-answers').addEventListener('click', () => {
+      showPopup('Xóa tất cả đáp án?', () => socket.emit('clear_answers', currentRoomId));
+    });
+
+    document.querySelectorAll('.btn-set-answer').forEach(btn => {
+      btn.addEventListener('click', function () {
+        socket.emit('update_room_state', { roomId: currentRoomId, key: 'correctAnswer', value: this.getAttribute('data-ans') });
+      });
+    });
+
+    document.getElementById('btn-delete-correct-answer').addEventListener('click', () => {
+      socket.emit('update_room_state', { roomId: currentRoomId, key: 'correctAnswer', value: null });
+    });
+
+    // Global Action functions for onclick handlers
+    window.kick = (username) => showPopup(`Kick ${username}?`, () => socket.emit('kick_user', { roomId: currentRoomId, username }));
+    window.ban = (username) => showPopup(`Ban ${username}?`, () => socket.emit('ban_user', { roomId: currentRoomId, username }));
+    window.unban = (username) => socket.emit('unban_user', { roomId: currentRoomId, username });
+
+  </script>
+</body>
+
+</html>
